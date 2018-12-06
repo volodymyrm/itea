@@ -16,8 +16,12 @@ from jinja2 import Environment, FileSystemLoader
 from flask import Flask
 
 
-class Tracker:
-
+class Scanner:
+    """
+    Scanner class that can scan pre-defined web page and return parsed result 
+    :param : page to be parsed. Environment variable 'UT_WEBPAGE_URL' by default
+    :return : list of dicts
+    """
     def __init__(self, url=os.environ.get('UT_WEBPAGE_URL', 'https://chromereleases.googleblog.com/')):
         self.webpage = url
         self.output = []
@@ -37,9 +41,10 @@ class Tracker:
             titles = [x.find_element_by_xpath("./h2/a").text for x in posts]
             dates = [x.find_element_by_xpath("./div/div/span").text for x in posts]
             links = [x.find_element_by_xpath("./h2/a").get_attribute('href') for x in posts]
-
             for i in range(len(posts)):
                 self.output.extend([{'title': titles[i], 'release_date': dates[i], 'link': links[i], 'postid': ids[i]}])
+        except Exception as e:
+            logger.error(e)
         finally:
             logger.info('Scan complete')
             driver.quit()
@@ -47,15 +52,26 @@ class Tracker:
 
 
 class Notifier:
-
+    """
+    Notification class that can send emails with text data.
+        email_server - sender smpt server. Environment variable 'UT_EMAIL_SERVER' by default
+        email_port - sender smpt port. Environment variable 'UT_EMAIL_PORT' by default
+        login - sender email account userbame. Environment variable 'UT_EMAIL_SENDER' by default
+        password - sender email account password. Environment variable 'UT_EMAIL_SENDER_PWD' by default
+        receiver - receiver email. Environment variable 'UT_EMAIL_RECEIVER' by default
+    """
     email_server = os.environ.get('UT_EMAIL_SERVER', 'smtp.gmail.com')
     email_port = os.environ.get('UT_EMAIL_PORT', 587)
     login = os.environ.get('UT_EMAIL_SENDER', 'pchelokoshka@gmail.com')
-    password = os.environ.get('UT_EMAIL_SENDER_PWD', 'Fluxld29')
+    password = os.environ.get('UT_EMAIL_SENDER_PWD', 'xxxxxx')
     receiver = os.environ.get('UT_EMAIL_RECEIVER', 'vovych007@gmail.com')
 
     @staticmethod
     def notify(data):
+        """
+        Static method that send email
+        :param data: txt data to be send
+        """
         sent_from = __class__.login
         to = __class__.receiver
         msg = MIMEMultipart()
@@ -80,7 +96,10 @@ class Notifier:
 
 
 class DataBase:
-
+    """
+    Working with SQL light database implementation
+        DATABASE - database file. Environment variable 'UT_DB_NAME'
+    """
     DATABASE = os.environ.get('UT_DB_NAME', 'Update.db')
     database = SqliteDatabase(DATABASE)
 
@@ -92,6 +111,10 @@ class DataBase:
             self.database.create_tables([Update])
 
     def write_to_db(self, data):
+        """
+        Method which perform writing to DB only unique results and notify about them via email
+        :param: data - list of dictionaries for writing to DB
+        """
         for item in data:
             if not item['postid'] in self.select_postid:
                 try:
@@ -109,6 +132,10 @@ class DataBase:
 
     @property
     def select_postid(self):
+        """
+        Method which queries post id's from database 
+        :return: posts - list of post id's
+        """
         query = Update.select(Update.postid)
         posts = []
         for item in query:
@@ -117,11 +144,18 @@ class DataBase:
 
     @property
     def select_all(self):
+        """
+        Method which queries all info from database 
+        :return: query - all database rows
+        """
         query = Update.select()
         return query
 
 
 class Update(Model):
+    """
+    Database model description class
+    """
     class Meta:
         database = DataBase.database
 
@@ -133,6 +167,11 @@ class Update(Model):
 
 
 def create_html(items):
+    """
+    Function that generate html code based on jinja template
+    :param: items - list to be displayed on html page
+    :return: html code
+    """
     try:
         root = os.path.dirname(os.path.abspath(__file__))
         templates_dir = root
@@ -146,6 +185,12 @@ def create_html(items):
 
 
 def setup_custom_logger(name):
+    """
+    Function that setup logger
+    :param: name - logger name
+            
+            If system variable UT_DEBUG set to True, logger will switch to debug mode 
+    """
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s',
                                   datefmt='%Y-%m-%d %H:%M:%S')
     handler = logging.FileHandler(os.environ.get('UT_LOGFILE', 'logfile.log'), mode='a')
@@ -159,22 +204,39 @@ def setup_custom_logger(name):
     return logger
 
 
-app = Flask(__name__)
+def create_app(database):
+    """
+    Function that create Flask application with defined database for querying
+    :param: database - database object
+    """
+    application = Flask(__name__)
+    app.config['database'] = database
+    return application
 
 
-@app.route('/', methods=['GET'])
 def reader():
+    """
+    Flask function which perform database query and return html result page
+    :return: 
+    """
     logger.info('Database was queried')
-    return create_html(db.select_all)
+    database = app.config['database']
+    return create_html(database.select_all)
 
 
 if __name__ == '__main__':
+    """
+    Main application loop. Runs infinitely with pre-set interval until keyboard interrupt
+    """
+
     logger = setup_custom_logger('UpdateTracker')
-    t = Tracker()
+    t = Scanner()
     db = DataBase()
+    app = create_app(db)
+    x = app.route('/', methods=['GET'])(reader) # Flask decorator for reader
     threading.Thread(target=app.run).start()
-    interval = os.environ.get('UT_DAYS_INTERVAL', 1)
-    timeout = interval * 60 * 60 *24
+    interval = os.environ.get('UT_DAYS_INTERVAL', 0.0002)
+    timeout = interval * 60 * 60 *24 # generate interval value in days
     timer = timeout
     try:
         logger.info('Tracker run with {}d interval'.format(interval))
