@@ -209,9 +209,9 @@ def create_app(database):
     Function that create Flask application with defined database for querying
     :param: database - database object
     """
-    application = Flask(__name__)
+    app = Flask(__name__)
     app.config['database'] = database
-    return application
+    return app
 
 
 def reader():
