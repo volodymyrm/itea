@@ -1,0 +1,7 @@
+{
+    "VAR_browser": "chrome",
+    "VAR_data_route": "https://autohdvideoapi.com/api/recipes",
+    "VAR_path": "https://nexus.similarweb.io/repository/spiders-desktop-extentions/uploads_from_warden/2018Oct11T10-38-19-autohd-extension@8.0.4+56f1887.zip",
+    "VAR_selenium_driver_version": "2_42",
+    "VAR_test_list": "yoda-all-chrome"
+}

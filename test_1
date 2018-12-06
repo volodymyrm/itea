@@ -1,0 +1,20 @@
+# from sandbox import strTuple
+#
+# testresult = (86, 111, 118, 67)
+# if strTuple("Vova") == testresult:
+#     print 'Testing OK'
+# else:
+#     print 'Testing Failed'
+
+text = [32, 46, 46, 46]
+result = []
+for t in text:
+    result.append(chr(t))
+print result
+
+
+text2 = [194, 160, 46, 46, 46]
+result2 = []
+for t in text2:
+    result2.append(chr(t))
+print result2
