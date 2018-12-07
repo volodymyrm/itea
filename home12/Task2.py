@@ -1,10 +1,13 @@
 import re
 
-inp = '192.168.1.1:1020'
+inp = '254.168.1.254:1020'
 
-socket = re.split(r':', inp)
-if len(socket) == 2:
-    host = socket[0]
-    port = socket[1]
+# socket = re.split(r':', inp)
+# if len(socket) == 2:
+#     host = socket[0]
+#     port = socket[1]
 
-    print(re.match(r'[0-9].[0-9].[0-9].[0-9]', host))
+result = re.match(r'(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)', inp)
+print(result)
+if result:
+    print(result.group(0))
