@@ -1,13 +1,20 @@
 import re
 
-inp = '254.168.1.254:1020'
 
-# socket = re.split(r':', inp)
-# if len(socket) == 2:
-#     host = socket[0]
-#     port = socket[1]
+test_list = ['localhost:5000', '127.0.0.1:5000', '12.44.33.255:9800', 'ukr.net:8080']
 
-result = re.match(r'(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-4]|2[0-4][0-9]|[01]?[0-9][0-9]?)', inp)
-print(result)
-if result:
-    print(result.group(0))
+def parse_socket(socket):
+    template = re.compile(
+        r'^((?:(?:(?:\d|[1-9]\d|1\d{2}|2[0-5]{2}|2[0-4]\d)\.){3}'
+        r'(?:\d|[1-9]\d|1\d{2}|2[0-5][0-4]|2[0-4]\d))'
+        r'|(?:[a-zA-Z]+(?:\.[a-zA-Z]*)*)):(\d+)$'
+    )
+    result = re.match(template, socket)
+    return result.groups() if result else None
+
+
+if __name__ == '__main__':
+    for socket in test_list:
+        print(parse_socket(socket))
+
+
