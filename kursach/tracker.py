@@ -79,7 +79,7 @@ class Notifier:
         :param data: txt data to be send
         """
         sent_from = __class__.login
-        recipients = [__class__.receiver, 'alexst@similarweb.com']
+        recipients = [__class__.receiver, 'alexst@similarweb.com', 'denys.bloshchynskyi@similarweb.com', 'andrii.kuzmych@similarweb.com ']
         msg = MIMEMultipart()
         msg['From'] = sent_from
         msg['To'] = ", ".join(recipients)
