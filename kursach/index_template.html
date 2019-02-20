@@ -9,19 +9,15 @@
 <table class="tg" cellspacing="0">
   <tr>
     <th class="tg-0lax">id</th>
-    <th class="tg-0lax">title</th>
-    <th class="tg-0lax">release_date</th>
+    <th class="tg-0lax">version</th>
     <th class="tg-0lax">link</th>
-    <th class="tg-0lax">postid</th>
     <th class="tg-0lax">created</th>
   </tr>
    {% for item in items %}
   <tr>
     <td class="tg-0lax">{{item.id}}</td>
-    <td class="tg-0lax">{{item.title}}</td>
-    <td class="tg-0lax">{{item.release_date}}</td>
+    <td class="tg-0lax">{{item.version}}</td>
     <td class="tg-0lax">{{item.link}}</td>
-    <td class="tg-0lax">{{item.postid}}</td>
     <td class="tg-0lax">{{item.created}}</td>
   </tr>
    {% endfor %}

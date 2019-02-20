@@ -2,7 +2,6 @@ import os
 import datetime
 import time
 import smtplib
-import threading
 import logging
 
 from peewee import *
@@ -22,7 +21,7 @@ class Scanner:
     :param : page to be parsed. Environment variable 'UT_WEBPAGE_URL' by default
     :return : list of dicts
     """
-    def __init__(self, url=os.environ.get('UT_WEBPAGE_URL', 'https://chromereleases.googleblog.com/')):
+    def __init__(self, url=os.environ.get('UT_WEBPAGE_URL', 'https://www.chromestatus.com/features/schedule')):
         self.webpage = url
         self.output = []
 
@@ -31,18 +30,25 @@ class Scanner:
         driver = webdriver.Chrome('chromedriver.exe')
         # driver = webdriver.Chrome('./chromedriver')
         driver.get(self.webpage)
-        post_title_xpath = "//div[@class='post']/h2/a"
+        releases_xpath = "//h1[contains(@class, 'chrome_version')]"
         try:
             WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH, post_title_xpath))
+                EC.presence_of_element_located((By.XPATH, releases_xpath))
             )
-            posts = driver.find_elements_by_xpath("//div[@class='post']")
-            ids = [x.get_attribute('data-id') for x in posts]
-            titles = [x.find_element_by_xpath("./h2/a").text for x in posts]
-            dates = [x.find_element_by_xpath("./div/div/span").text for x in posts]
-            links = [x.find_element_by_xpath("./h2/a").get_attribute('href') for x in posts]
-            for i in range(len(posts)):
-                self.output.extend([{'title': titles[i], 'release_date': dates[i], 'link': links[i], 'postid': ids[i]}])
+            links = driver.execute_script("""
+                links = []; 
+                document.querySelectorAll('h1[class*=chrome_version]').forEach((el) => 
+                    {links.push(el.querySelector('a').href)}); 
+                return links;
+                """)
+            versions = driver.execute_script("""
+                versions = []; 
+                document.querySelectorAll('h1[class*=chrome_version]').forEach((el) => 
+                    {versions.push(el.querySelector('a').text)}); 
+                return versions;
+                """)
+            for i in range(len(links)):
+                output.extend([{'version': versions[i], 'link': links[i]}])
         except Exception as e:
             logger.error(e)
         finally:
@@ -77,10 +83,8 @@ class Notifier:
         msg = MIMEMultipart()
         msg['From'] = sent_from
         msg['To'] = to
-        msg['Subject'] = data['title']
-        body = 'Attention!!! \n{title}\n{date}\n{link}'.format(title=data['title'],
-                                                               date=data['release_date'],
-                                                               link=data['link'])
+        msg['Subject'] = 'New Chrome version released - {}'.format(data['version'])
+        body = 'Attention! \n{title}\n{link}'.format(title=msg['Subject'], link=data['link'])
         msg.attach(MIMEText(body, 'plain'))
         email_text = str(msg)
         try:
@@ -116,13 +120,11 @@ class DataBase:
         :param: data - list of dictionaries for writing to DB
         """
         for item in data:
-            if not item['postid'] in self.select_postid:
+            if not item['version'] in self.select_version:
                 try:
                     Notifier.notify(item)
-                    query = (Update.insert(title=item['title'],
-                                           release_date=item['release_date'],
+                    query = (Update.insert(version=item['version'],
                                            link=item['link'],
-                                           postid=item['postid'],
                                            created=datetime.datetime.now())
                                    .on_conflict('replace')
                                    .execute())
@@ -131,16 +133,16 @@ class DataBase:
                     logger.error(e)
 
     @property
-    def select_postid(self):
+    def select_version(self):
         """
-        Method which queries post id's from database 
-        :return: posts - list of post id's
+        Method which queries versions from database
+        :return: versions - list of versions
         """
-        query = Update.select(Update.postid)
-        posts = []
+        query = Update.select(Update.version)
+        versions = []
         for item in query:
-            posts.extend([item.postid])
-        return posts
+            versions.extend([item.version])
+        return versions
 
     @property
     def select_all(self):
@@ -159,9 +161,7 @@ class Update(Model):
     class Meta:
         database = DataBase.database
 
-    postid = CharField()
-    title = CharField()
-    release_date = DateTimeField()
+    version = CharField()
     link = CharField()
     created = DateTimeField()
 
