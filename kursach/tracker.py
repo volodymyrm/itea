@@ -62,9 +62,9 @@ class Notifier:
     """
     email_server = os.environ.get('UT_EMAIL_SERVER', 'smtp.gmail.com')
     email_port = os.environ.get('UT_EMAIL_PORT', 587)
-    login = os.environ.get('UT_EMAIL_SENDER', 'pchelokoshka@gmail.com')
-    password = os.environ.get('UT_EMAIL_SENDER_PWD', 'xxxxxx')
-    receiver = os.environ.get('UT_EMAIL_RECEIVER', 'vovych007@gmail.com')
+    login = os.environ.get('UT_EMAIL_SENDER')
+    password = os.environ.get('UT_EMAIL_SENDER_PWD')
+    receiver = os.environ.get('UT_EMAIL_RECEIVER')
 
     @staticmethod
     def notify(data):
@@ -196,7 +196,7 @@ def setup_custom_logger(name):
     handler = logging.FileHandler(os.environ.get('UT_LOGFILE', 'logfile.log'), mode='a')
     handler.setFormatter(formatter)
     logger = logging.getLogger(name)
-    if os.environ.get('UT_DEBUG'):
+    if os.environ.get('UT_DEBUG', True):
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.ERROR)
@@ -232,10 +232,10 @@ if __name__ == '__main__':
     logger = setup_custom_logger('UpdateTracker')
     t = Scanner()
     db = DataBase()
-    app = create_app(db)
-    x = app.route('/', methods=['GET'])(reader) # Flask decorator for reader
-    threading.Thread(target=app.run).start()
-    interval = os.environ.get('UT_DAYS_INTERVAL', 0.0002)
+#    app = create_app(db)
+#    x = app.route('/', methods=['GET'])(reader) # Flask decorator for reader
+#    threading.Thread(target=app.run).start()
+    interval = os.environ.get('UT_DAYS_INTERVAL', 1)
     timeout = interval * 60 * 60 *24 # generate interval value in days
     timer = timeout
     try:
@@ -243,6 +243,8 @@ if __name__ == '__main__':
         print('Press CTRL+C to exit')
         output = t.scan
         db.write_to_db(output)
+        print('Last scan:', datetime.date.today())
+        logger.info('Last scan: {}'.format(datetime.date.today()))
         while True:
             time.sleep(0.985)
             if timer > 0:
@@ -250,6 +252,8 @@ if __name__ == '__main__':
             else:
                 output = t.scan
                 db.write_to_db(output)
+                print('Last scan:', datetime.date.today())
+                logger.info('Last scan: {}'.format(datetime.date.today()))
                 timer = timeout
     except KeyboardInterrupt:
         logger.info('Keyboard interrupt')
