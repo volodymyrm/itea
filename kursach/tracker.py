@@ -3,7 +3,7 @@ import datetime
 import time
 import smtplib
 import logging
-
+import threading
 from peewee import *
 from selenium import webdriver
 from email.mime.multipart import MIMEMultipart
@@ -48,7 +48,7 @@ class Scanner:
                 return versions;
                 """)
             for i in range(len(links)):
-                output.extend([{'version': versions[i], 'link': links[i]}])
+                self.output.extend([{'version': versions[i], 'link': links[i]}])
         except Exception as e:
             logger.error(e)
         finally:
@@ -79,10 +79,10 @@ class Notifier:
         :param data: txt data to be send
         """
         sent_from = __class__.login
-        to = __class__.receiver
+        recipients = [__class__.receiver, 'alexst@similarweb.com']
         msg = MIMEMultipart()
         msg['From'] = sent_from
-        msg['To'] = to
+        msg['To'] = ", ".join(recipients)
         msg['Subject'] = 'New Chrome version released - {}'.format(data['version'])
         body = 'Attention! \n{title}\n{link}'.format(title=msg['Subject'], link=data['link'])
         msg.attach(MIMEText(body, 'plain'))
@@ -91,8 +91,8 @@ class Notifier:
             server = smtplib.SMTP(__class__.email_server, __class__.email_port)
             server.starttls()
             server.login(__class__.login, __class__.password)
-            server.sendmail(__class__.login, __class__.receiver, email_text)
-            logger.info('Email to {r} sent successfully'.format(r=to))
+            server.sendmail(sent_from, recipients, email_text)
+            logger.info('Email to {r} sent successfully'.format(r=str(recipients)))
         except Exception as e:
             logger.error(e)
         else:
@@ -232,9 +232,9 @@ if __name__ == '__main__':
     logger = setup_custom_logger('UpdateTracker')
     t = Scanner()
     db = DataBase()
-#    app = create_app(db)
-#    x = app.route('/', methods=['GET'])(reader) # Flask decorator for reader
-#    threading.Thread(target=app.run).start()
+    app = create_app(db)
+    x = app.route('/', methods=['GET'])(reader) # Flask decorator for reader
+    threading.Thread(target=app.run).start()
     interval = os.environ.get('UT_DAYS_INTERVAL', 1)
     timeout = interval * 60 * 60 *24 # generate interval value in days
     timer = timeout
